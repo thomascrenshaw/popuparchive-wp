@@ -6,7 +6,7 @@
  * @package   Popuparchive-WP
  * @author    Thomas Crenshaw <thomas@circadigital.biz>
  * @copyright 2014 Thomas Crenshaw <thomas@circadigital.biz>
- * @license   
+ * @license
  * @link      https://circadigital.biz/
  */
 require_once 'includes/Services/Popuparchive.php';
@@ -120,9 +120,9 @@ class Popuparchive_Audio_Items_Display extends Popuparchive_WP_List_Table
             'description' => 'Description',
             'shortcode' => 'Add Shortcode'
         );
-        return $columns; 
-    }
 
+        return $columns;
+    }
 
     /**
      * Prepares the list of items for displaying.
@@ -172,44 +172,46 @@ class Popuparchive_Audio_Items_Display extends Popuparchive_WP_List_Table
         $this->items = $items;
     }
 
-
     /**
      * Function to override output of list columns for the shortcode
-     * 
+     *
      * Overriding the standard text output of the columns with a JQuery link to insert the shortcode into
      * the text box
-     * 
-     * @todo the plugin is only listing the first audio file. Need to update to show when there
-     * are multiple audio files in the same audio item
-     * 
+     *
      * @param object $item The current item
-     * 
-     * @return array 
+     *
+     * @return array
      */
     public function column_shortcode($item)
     {
-        /* the below string sets up the jQuery write back to the post by
-        exposing the available shortcode related items. The tags would be done
-        in the same fashion
-        */
+        /*
+         * the below string sets up the jQuery write back to the post by
+         *  exposing the available shortcode related items. The tags would be done
+         *  in the same fashion
+         *
+         * One challenge is to only add this code to the media modal and not to the
+         * admin list area.
+         *
+         */
+
         //$shortcodeString = '<input id="puawpShortcode-'.$item['audio_file_ids'][0].
         //'" type="text" style="display:none;" value="'.$item['shortcode'].'"><a href="#" id="puawpShortcodeInsert-'.$item['audio_file_ids'][0].
         //'">Insert Pop Up Archive player</a>';
 
-        /* this is a temp placeholder until the jQuery is put into place */
-        $shortcodeString = $item['shortcode'];
-
-        return $shortcodeString;
+        $htmlShortcodeString = "<strong>Audio File Count = ".$item['audio_files_count'].'</strong><br/>';
+        for ($i=0; $i<$item['audio_files_count'];$i++) {
+            $htmlShortcodeString .=$item['audio_file_data'][$i]['audio_file_shortcode'].'<br/>';
+        }
+        return $htmlShortcodeString;
     }
 
     /**
      * Method to output the array of tags as a string
      *
      * @param object $item The current item
-     * 
      * @access public
-     * 
-     * @return array 
+     *
+     * @return array
      */
     public function column_tags($item)
     {
@@ -218,11 +220,9 @@ class Popuparchive_Audio_Items_Display extends Popuparchive_WP_List_Table
     }
 
     /**
-     * Pop Up Archive Override Alert --
+     * Method to convert array to a comma separated string for display
      *
-     *
-     *
-     * @param object $item The current item
+     * @param array $array array that is going to be converted to string
      *
      * @access public
      */
@@ -273,9 +273,9 @@ function renderAudioItemsList($rendering_modal = false, $post_id = '')
     if (!empty($collections_data)) {
         display_collections_page_top($collections_data, $collection_name, $rendering_modal, $post_id);
     } else {
-        echo '<strong>No Collections Were Found That Matched Your Information</strong>';
+        echo '<br/><strong>No Collections Were Found That Matched Your Information</strong>';
     } // end if (!empty($collections))
-    
+
     $display_table_msg = '<br /><div class="popuparchive_custom_blue_box">Displaying Results For <strong>'.strtoupper($collection_name).'</strong></div>';
     echo $display_table_msg;
 
@@ -296,7 +296,7 @@ function renderAudioItemsList($rendering_modal = false, $post_id = '')
 } // end function renderAudioItemsList()
 
 /**
- * Helper function that sets the authorization code 
+ * Helper function that sets the authorization code
  * that was returned from the OAuth query
  *
  * @param puawp_options array contains the Pop Up Archive OAuth2 options
@@ -312,7 +312,7 @@ function puawp_set_access_token($puawp_options)
 } // end puawp_set_access_token
 
 /**
- * Helper function that retreives the collections for the authorized 
+ * Helper function that retreives the collections for the authorized
  * user from the API
  *
  * @param collection_id string (optional) unique identifier of the currently selected collection
@@ -399,23 +399,25 @@ function pua_get_audio_items($collection_id)
         /* for the time being, returning an empty array if there is an issue
          * @todo 2
          */
+
         return $data;
         //exit($e->getMessage());
     }
-    $bigdata = json_decode($audio_items, true); //decode json data into array
+    $audio_data = json_decode($audio_items, true); //decode json data into array
 
-    $total_items = $bigdata['total_hits'];
-    if($total_items == 0) {
+    $total_items = $audio_data['total_hits'];
+    if ($total_items == 0) {
         return "Your Collection does not contain any audio items";
     } else {
-        $flat_data = flatten_the_data($collection_id, $bigdata);
-        return $flat_data;
+        $flat_audio_data = flatten_the_data($collection_id, $audio_data);
+
+        return $flat_audio_data;
     }
 } // end pua_get_audio_items
 
 /**
- * Method to flatten the data, 
- * 
+ * Method to flatten the data,
+ *
  * After the data is flattened, just the minimum needed for display and use in the
  * plugin. However, right now there are a few extra values in case the business
  * case changes for how the data is used.
@@ -438,56 +440,65 @@ function flatten_the_data($collection_id, $audio_items)
         foreach ($results_items as $item) {
             /* @todo update this to create the array on the fly */
             /* @todo write this directly to the database so that it is available */
-
-            /* get the number of audio clips in the item */
-            $audio_items_count = count($item['audio_files']); 
-            /* if no audio clips, do not parse the item. just skip and begin the next item */
-            if ($audio_items_count >= 1 && $item['id'] != '') {
-                $item_id = strval($item['id']);
-                $display_title = $item['title'];
-                $description = !empty($item['description']) ? $item['description'] : "No Description Available";
-                $embed_title = urlencode($item['title']);
-                $collection_id = strval($item['collection_id']);
-                $audio_file_ids = array();
-                foreach ($item['audio_files'] as $audio_files) {
-                    $audio_file_ids[] = strval($audio_files['id']);
-                    /* embed code pattern is {TITLE}/{AUDIO_ID}/{ITEM_ID}/{COLLECTION_ID} */
-                    $embed_code = $embed_title.'/'.$audio_files['id'].'/'.$item_id.'/'.$collection_id;
+            $item_id = strval($item['id']);
+            $display_title = $item['title'];
+            $description = !empty($item['description']) ? $item['description'] : "No Description Available";
+            $embed_title = rawurlencode($item['title']);
+            $collection_id = strval($item['collection_id']);
+            /* get the number of audio files in the item */
+            $audio_files_count = count($item['audio_files']);
+            /* set up the arrays for audio files and associated items */
+            $audio_files = array();
+            $audio_file_data = array();
+            $tags = array();
+            /* tags are related to an item and of higher value than entities */
+            if (isset($item['tags'])) {
+                $tag_count = count($item['tags']);
+                for ($i=0; $i<$tag_count; $i++) {
+                    $tags[] = $item['tags'][$i];
                 }
-                $tags = array();
-                if (isset($item['tags'])) {
-                    $tag_count = count($item['tags']);
-                    for ($i=0; $i<$tag_count; $i++) {
-                        $tags[] = $item['tags'][$i];
-                    }
-                } else {
-                    if (isset($item['entities'])) {
-                        $entity_count = count($item['entities']);
-                        for ($i=0; $i<$entity_count; $i++) {
+            }
+            /* check to be sure there are audio_files in the audio item */
+            if ($audio_files_count >= 1) {
+                /* due to the possibility of multiple audio files per audio item, 
+                   an array is created to store the id, embed code and shortcode */
+                foreach ($item['audio_files'] as $audio_file) {
+                    $audio_file_id = strval($audio_file['id']);
+                    /* embed code pattern is {TITLE}/{AUDIO_ID}/{ITEM_ID}/{COLLECTION_ID} */
+                    $audio_file_embed_code = $embed_title.'/'.$audio_file['id'].'/'.$item_id.'/'.$collection_id;
+                    /* shortcode pattern: [popuparchive audio_file_id item_id collection_id] this can be shortened to just the audio file id in the future */
+                    $audio_file_shortcode = '[popuparchive audio_file_id='.$audio_file_id.' item_id='.$item_id.' collection_id='.$collection_id.']';
+                    $audio_file_data[] = array('audio_file_id' => $audio_file_id, 'audio_file_embed_code' => $audio_file_embed_code, 'audio_file_shortcode' => $audio_file_shortcode);
+                }
+                /* check to be sure there are entities and that we are not already using tags */
+                if (isset($item['entities']) && count($tags) < 1) {
+                    $entity_count = count($item['entities']);
+                    for ($i=0; $i<$entity_count; $i++) {
+                        if ($item['entities'][$i]['category'] != 'location') {
                             $tags[] = $item['entities'][$i]['name'];
                         }
                     }
                 }
-                $flat_item[] = array('item_id' => $item_id,'description' => $description, 'collection_id' => $collection_id, 'display_title' => $display_title, 
-                                'shortcode' => '[popuparchive audio_file_id='.$audio_file_ids[0].' item_id='.$item_id.' collection_id='.$collection_id.']', 'embed_title' => $embed_title, 
-                                'audio_items_count' => $audio_items_count, 'audio_file_ids' => $audio_file_ids, 'embed_code' => $embed_code,
-                                'tags' => $tags, 'tag_count' => count($tags));
-            } // end of conditional
-        }
-        return $flat_item;
+            }
+            /* strip out any duplicate tags */
+            $uniquetags = array_keys(array_flip($tags));
+            $flat_item_array[] = array('item_id' => $item_id, 'display_title' => $display_title, 'embed_title' => $embed_title, 'description' => $description, 'collection_id' => $collection_id,
+                            'audio_files_count' => $audio_files_count, 'audio_file_data' => $audio_file_data, 'tags' => $uniquetags, 'tag_count' => count($uniquetags));
+        } // end of foreach results_items as items
+        return $flat_item_array;
     } else {
         return;
     }
 }
 
 /**
- * helper method that retreives the collection name 
- * 
+ * helper method that retreives the collection name
+ *
  * @param integer $collection_id    unique identifier for the collection
  * @param array   $collections_data metadata associated with the collections
- * 
+ *
  * @todo have this pull from the stored data to save an API call
- * 
+ *
  * @return string
  */
 function get_collection_name($collection_id, $collections_data)
@@ -497,14 +508,15 @@ function get_collection_name($collection_id, $collections_data)
            return $collection['title'];
         }
    }
+
    return null;
 }
 
 /**
  * Method to get collections
- * 
+ *
  * This method retreives collections using the Pop Up Archive API
- * 
+ *
  * @param boolean $refresh variable to determine if refreshing of data is needed
  *
  * @todo update this method to allow for refresh by flusing the database
@@ -522,19 +534,21 @@ function get_collections($refresh = false)
         $collections_data = pua_get_collections();
         store_data($collections_data,'popuparchive_collections_data');
     }
+
     return $collections_data;
 }
 
 /**
  * Get audio data and process it to remove extra information
- * 
+ *
  * @param array   $collections_data array of collection data
  * @param integer $collection_id    unique collection identifier
- * 
+ *
  * @return array
- * 
+ *
  */
-function get_flat_audio_data($collections_data, $collection_id = null) {
+function get_flat_audio_data($collections_data, $collection_id = null)
+{
     /* check for collection_id */
     if ($collection_id == null) {
         /* pick the first collection in the list for display */
@@ -551,19 +565,20 @@ function get_flat_audio_data($collections_data, $collection_id = null) {
 
 /**
  * Store the audio data
- * 
+ *
  * This method stores the audio data in an appropriate database
- * 
+ *
  * @param array $collections_data array of collection data
- * 
+ *
  * @todo currently this method is a) not in use and b) writing to the options
- * database via the store_data() method. It should really be writing to 
+ * database via the store_data() method. It should really be writing to
  * either a custom post type -or- to a full-blown WP table. This should be
- * determined by the future business requirements for the plugin and performance. 
- * 
- * @return array 
+ * determined by the future business requirements for the plugin and performance.
+ *
+ * @return array
  */
-function store_flat_audio_data($collections_data) {
+function store_flat_audio_data($collections_data)
+{
     /* pick the first collection in the list for display */
     /* @todo update this to pick out the first collection that has items and strip out others */
     /* @todo update this to strip out private collections */
@@ -574,22 +589,24 @@ function store_flat_audio_data($collections_data) {
         $flat_audio_data = pua_get_audio_items($collection['id']);
         store_data($flat_audio_data, 'popuparchive-collection-'.$collection['id']);
     }
+
     return $flat_audio_data;
 }
 
 /**
  * Stores data in the options table
- * 
+ *
  * @param array  $data      array of data to be stored
  * @param string $data_name name to store the data under
  */
-function store_data($data, $data_name) {
+function store_data($data, $data_name)
+{
     /* @todo store the PUA data in its own table */
     update_option($data_name, serialize($data));
 }
 
 /**
- * Helper function to strip out the extra JSON data and store 
+ * Helper function to strip out the extra JSON data and store
  * just what is needed
  *
  * @param array $raw_collections list of collections returned from the API
@@ -607,7 +624,18 @@ function minimize_collection_data($raw_collections, $how_many = 0, $offset = 0)
     return $limited_collections;
 }
 
-function display_collections_page_top($collections_data, $collection_name = '', $rendering_modal = false, $post_id = '') {
+/**
+ * Helper function
+ *
+ * @param array  $collections_data list of collections returned from the API
+ * @param string $collection_name  name of collection being displayed
+ * @param bool   $rendering_modal  variable used to set the form action
+ * @param string $post_id          variable to hold the post_id when page is refreshed
+ *
+ * @return array
+ */
+function display_collections_page_top($collections_data, $collection_name = '', $rendering_modal = false, $post_id = '')
+{
     $drop_down_option = array();
 ?>
     <h2>Your Pop Up Archive Audio Items</h2>
@@ -618,14 +646,14 @@ function display_collections_page_top($collections_data, $collection_name = '', 
 <?php
     } else {
 ?>
-    <form action="admin.php?page=puawp_options&tab=puawp_display_page" method="post">
+    <form action="admin.php?page=puawp_options&tab=puawp_display_page" method="post" id="modal-list">
 <?php
     }
 ?>
     <label>Choose a collection: </label>
         <select name="puawp-collections-filter">
 <?php
-       foreach($collections_data['collections'] as $collection) {
+       foreach ($collections_data['collections'] as $collection) {
             $drop_down_option = '<option value="'.$collection['id'].'"';
             if (strtolower($collection_name) == strtolower($collection['title'])) {
                 $drop_down_option .= ' selected=SELECTED">'.$collection['title'].'</option>';

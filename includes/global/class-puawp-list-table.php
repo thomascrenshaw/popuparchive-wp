@@ -924,10 +924,12 @@ class Popuparchive_WP_List_Table
 
     /**
      * Send required variables to JavaScript land
+     * 
+     * This is the previous version of _js_vars
      *
      * @access private
      */
-    private function _js_vars()
+    private function _old_js_vars()
     {
         $current_screen = get_current_screen();
 
@@ -949,7 +951,7 @@ class Popuparchive_WP_List_Table
      *
      * @access private
      */
-    private function _new_js_vars()
+    private function _js_vars()
     {
          $args = array(
             'class'  => get_class( $this ),

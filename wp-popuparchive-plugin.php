@@ -19,9 +19,9 @@ if (!class_exists('Popuparchive_WP')) {
      * Main plugin class.
      *
      * @since 1.0.0
-     * 
-     * @todo must must must add a get_instance class to ensure not creating multiple instances of popuparchive
-     * 
+     *
+     * @todo just in case - add a get_instance class to ensure not creating multiple instances of popuparchive
+     *
      *
      * @package Popuparchive_WP
      * @author  Thomas Crenshaw
@@ -100,10 +100,10 @@ if (!class_exists('Popuparchive_WP')) {
 
         /**
          * Initializes and loads the plugin into WordPress
-         * 
+         *
          * @since 1.0.0
          */
-        public function init() 
+        public function init()
         {
             /* run hook once the plugin has been initialized */
             do_action( 'popuparchive_init');
@@ -116,18 +116,17 @@ if (!class_exists('Popuparchive_WP')) {
 
         /**
          * Loads all the admin functionality into scope
-         * 
+         *
          * @since 1.0.0
          */
-        public function require_admin() {
-            
+        public function require_admin()
+        {
              require plugin_dir_path( __FILE__ ) . 'includes/admin/addtopost.php';
-
         }
 
         /**
          * Define the constants.
-         * 
+         *
          * @since 1.0.0
          */
         function define_constants()
@@ -138,7 +137,7 @@ if (!class_exists('Popuparchive_WP')) {
 
         /**
          * Begin loading the applicable items that power the plugin.
-         * 
+         *
          * @since 1.0.0
          */
         function loader_operations()
@@ -154,22 +153,22 @@ if (!class_exists('Popuparchive_WP')) {
 
         /**
          * Load the necessary libraries for the Pop Up Archive plugin.
-         * 
+         *
          * @todo slim this down to something that is a) realistic and b) manageable
-         * 
+         *
          * @since 1.0.0
          */
         function load_libs()
         {
             wp_enqueue_script('jquery');
             if (isset($_GET['page']) && $_GET['page'] == 'puawp_options') {
-            // some ajax/jquery script enqueues etc
+            /* some ajax/jquery script enqueues etc */
                 wp_enqueue_script('jquery-ui-core');
                 wp_enqueue_script('jquery-ui-widget');
                 wp_enqueue_script('jquery-ui-position');
                 wp_enqueue_script('jquery-ui-dialog');
 
-                //media upload stuff
+                /* media upload stuff for later */
                 wp_enqueue_script('media-upload');
                 wp_enqueue_script('thickbox');
                 wp_enqueue_style('thickbox'); //style sheet for thickbox
@@ -178,7 +177,7 @@ if (!class_exists('Popuparchive_WP')) {
 
         /**
          * Initialize the admin tasks.
-         * 
+         *
          * @since 1.0.0
          */
         function init_tasks()
@@ -193,7 +192,7 @@ if (!class_exists('Popuparchive_WP')) {
 
         /**
          * Call the initial admin methods.
-         * 
+         *
          * @since 1.0.0
          */
         function admin_init_tasks()
@@ -206,7 +205,7 @@ if (!class_exists('Popuparchive_WP')) {
 
         /**
          * Calls methods after the plugin is loaded
-         * 
+         *
          * @since 1.0.0
          */
         function popuparchive_plugins_loaded()
@@ -226,17 +225,17 @@ if (!class_exists('Popuparchive_WP')) {
          */
         function popuparchive_shortcode($atts)
         {
-            if (!isset($atts['name'])) { 
+            if (!isset($atts['name'])) {
                 if ($atts['audio_file_id'] && $atts['item_id'] && $atts['collection_id']) {
                     $atts['name'] = $this->get_audio_item_name($atts['collection_id'], $atts['item_id']);
                 } else {
                 return '<div style="color:red;"><p><strong>Pop Up Archive Plugin Error: There is an issue with the data provided in the shortcode.
                 <br />Please verify that you have correctly entered the audio file id, the item id and the collection id</strong></p></div>';                }
             }
+
             return "<iframe frameborder='0' scrolling='no' seamless='yes' width='508 height='95' name='".$atts['name']."' src='https://www.popuparchive.com/embed_player/".rawurlencode($atts['name'])."/".$atts['audio_file_id']."/".$atts['item_id']."/".$atts['collection_id']."' ></iframe>";
 
         }
-
 
         /**
          * Audio item name is required for the iFrame used in the shortcode.
@@ -248,7 +247,7 @@ if (!class_exists('Popuparchive_WP')) {
          *
          * @return string     The audio item name.
          */
-        function get_audio_item_name($collection_id, $item_id) 
+        function get_audio_item_name($collection_id, $item_id)
         {
             require_once 'includes/Services/Popuparchive.php';
             $pua_options = get_option('popuparchive_settings');
@@ -265,6 +264,7 @@ if (!class_exists('Popuparchive_WP')) {
                 $popuparchive->setAccessToken($puawp_access_token);
             } else {
                 /* display an error stating that the user needs to authenticate first */
+
                 return '<div style="color:red;"><p><strong>Pop Up Archive Plugin Error: You need to authenticate your connection to the Pop Up Archive API.
                 <br />Please go to the Pop Up Archive plugin settings and configure your API credentials.</strong></p></div>';
             }
@@ -272,6 +272,7 @@ if (!class_exists('Popuparchive_WP')) {
                 $item_metadata = $popuparchive->getItemById($collection_id, $item_id);
             } catch (Popuparchive_Services_Invalid_Http_Response_Code_Exception $e) {
                 echo '<div style="color:red;"><p><strong>Pop Up Archive Plugin Error: Could not display your Pop Up Archive Items - Error code ('.$e->getHttpCode().').</strong></p></div>';
+
                 return;
             }
             $item_metadata_decode = json_decode($item_metadata, true);
@@ -319,7 +320,7 @@ if (!class_exists('Popuparchive_WP')) {
 
         /**
          * Load the admin page settings
-         * 
+         *
          * Loads both tab settings from the database into their respective arrays.
          * Uses array_merge to merge with default values if they're missing.
          *
@@ -346,8 +347,8 @@ if (!class_exists('Popuparchive_WP')) {
             ), $this->pua_display_usage );
         }
 
-        /* 
-         * It is time to register the display templates page via the WordPress Settings API 
+        /*
+         * It is time to register the display templates page via the WordPress Settings API
          * and append the setting to the tabs array of the object.
          */
 
@@ -415,7 +416,7 @@ if (!class_exists('Popuparchive_WP')) {
             wp_register_style('pua-styles', PUAWP_PLUGIN_URL.'/assets/css/popuparchive.css', array(), '1.0.0', 'all');
 
              /* Enqueue
-              * It will be called only on the plugin admin page, enqueue our stylesheet here 
+              * It will be called only on the plugin admin page, enqueue our stylesheet here
               */
             wp_enqueue_style('pua-styles');
         }
@@ -464,7 +465,7 @@ if (!class_exists('Popuparchive_WP')) {
 
         /**
          * Render plugin settings tabs
-         * 
+         *
          * Renders our tabs in the plugin options page, walks through the object's tabs array and prints
          * them one by one. Provides the heading for the plugin_options_page method.
          *
@@ -510,7 +511,7 @@ if (!class_exists('Popuparchive_WP')) {
          *
          * @return object The Popuparchive_WP object.
          */
-        public static function get_instance() 
+        public static function get_instance()
         {
             if ( ! isset( self::$instance ) && ! ( self::$instance instanceof Popuparchive_WP ) ) {
                 self::$instance = new Popuparchive_WP();
