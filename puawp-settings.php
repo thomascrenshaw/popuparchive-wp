@@ -156,27 +156,29 @@ function Display_PUAWP_Settings()
 <div class="postbox">
 <h3><label for="title">Before Using This Plugin</label></h3>
 <div class="inside">
-<p class="postbox-container">To use the WP Pop Up Archive plugin you will firstly need to create a Pop Up Archive app using your current Pop Up Archive account details and then paste some
-of the details from your app in the configuration settings of this page.
+<p class="postbox-container">The Pop Up Archive plugin requires permission to access your Pop Up Archive account. The steps to authenticate this plugin are listed below.
 <br />
-<h2>Creating Your Pop Up Archive App</h2>
-This literally takes a minute to do. To create a Pop Up Archive app go to <a href="https://www.popuparchive.com/oauth/applications/" target="_blank">THIS PAGE</a> and fill in the details as follows:
+<h2>Step 1. Creating Your Pop Up Archive Application</h2>
+To create a Pop Up Archive application click <a href="https://www.popuparchive.com/oauth/applications/new" target="_blank"><span name="popuparchive_applications" class="button-primary">HERE</span></a> and fill in the 'Name' and 'Redirect uri' fields with the values listed below. NOTE: You may need to sign into your
+Pop Up Archive account)
+<table>
+    <tr><td>Name:</td><td><strong><?php echo strtolower(preg_replace('/[\s\W]+/','',get_bloginfo('name'))); ?>-popuparchive-wp</strong></td></tr>
+    <tr><td>Redirect uri:</td><td><strong><?php echo site_url();?>/wp-admin/admin.php</strong></td></tr>
+</table>
+<h2>Step 2. Configuring the Plugin</h2>
+After creating the application on the Pop Up Archive site, copy the values listed for 'Application ID' and 'Secret' paste them in the Configuration Settings section below.:
+
+<h2>Step 3. Save the Configuration Settings</h2>
+After entering the Application Id and Secret, click the "Save Settings" button. This page will refresh and a message will be displayed below stating that the access token has not been saved. This is expected.
+
+<h2>Step 4. Connecting To Pop Up Archive</h2>
+This is it. Almost done. <br/>
+Click the "<strong>Connect To Pop Up Archive</strong>" link in the "Pop Up Archive Connection Status" section below. One of two things will happen:
 <ol>
-    <li type="disc">
-        Enter the following string for the "Name" of your application - <strong>popuparchive-wp</strong></li>
-        <li type="disc">Copy and paste the following url for the "Redirect uri" of your application <span style="color: green; background-color:yellow;"><strong><?php echo site_url();?>/wp-admin/admin.php</strong></span></li>
+<li class="disc">If this is the first time you have authorized this particular Pop Up Archive application, the Pop Up Archive site will open and ask you to allow the plugin to connect to your Pop Up Archive account. Authorize the plugin and you will be returned to this page.</li>
+<li class="disc">If you have previously authorized this particular Pop Up Archive application, the Pop Up Archive site will not open.</li>
 </ol>
-<h2>Configuring the Plugin</h2>
-After creating the application on the Pop Up Archive site, copy the following details from your app and paste in the configuration settings on this page:
-<ol>
-    <li type="disc"><strong>Application ID</strong> - Copy this value from your Pop Up Archive app and paste in the "Application ID" field below.</li>
-    <li type="disc"><strong>Secret</strong> - Copy this value of your application's "Secret" and paste in the "Secret" field below.</li>
-</ol>
-After entering the configuration settings click the "Save Settings" button.
-<h2>Connecting To Pop Up Archive</h2>
-After saving your settings click the "<strong>Connect To Pop Up Archive</strong>" link in the "Pop Up Archive Connection Status" section below.
-This will take you to the Pop Up Archive site and ask you to allow the "popuparchive-wp" plugin to connect to your Pop Up Archive account.
-Click the "Connect" button.
+If everything works as expected, you should see a green message that states "You are currently connected to Pop Up Archive". 
 </p>
 </div></div>
 <div class="postbox">
@@ -184,7 +186,7 @@ Click the "Connect" button.
 <div class="inside puawp_connect_status">
 <?php
     if ($puawp_client_id && $puawp_client_secret && $puawp_access_token == "") {
-        echo '<div class="puawp_error_msg" style="color:red;"><strong>You are currently disconnectedddd from Pop Up Archive.</strong></div>';
+        echo '<div class="puawp_error_msg" style="color:red;"><strong>The Pop Up Archive access token has not been set. Click the link below to Authorize this plugin.</strong></div>';
 ?>
 
 <?php
@@ -202,7 +204,7 @@ Click the "Connect" button.
 <form action="<?php echo $_SERVER["REQUEST_URI"]; ?>" method="POST"	onsubmit="">
 <input type="hidden" name="popuparchive_update" id="popuparchive_update" value="true" />
 <div class="postbox">
-<h3><label for="title">Enter Your Pop Up Archive Account Details</label></h3>
+<h3><label for="title">Pop Up Archive Plugin Configuration Settings</label></h3>
 <div class="inside">
 <table class="form-table">
     <tr valign="top">
@@ -228,8 +230,7 @@ Click the "Connect" button.
 
 function popuparchive_authenticate($puawp_options)
 {
-    //get Pop Up Archive options
- //   $puawp_options = get_option('popuparchive_settings');
+    /* get Pop Up Archive options */
     if ($puawp_options) {
         $puawp_client_id = $puawp_options['puawp_client_id'];
         $puawp_client_secret = $puawp_options['puawp_client_secret'];
@@ -240,38 +241,29 @@ function popuparchive_authenticate($puawp_options)
     $popuparchive = new Popuparchive_Services($puawp_client_id, $puawp_client_secret, $puawp_redir_uri);
  
     if ($puawp_access_token == "") {
-        //$params = array('scope' => 'non-expiring');
-//        $authorizeUrl = $popuparchive->getAuthorizeUrl($params);
         $authorizeUrl = $popuparchive->getAuthorizeUrl();
         echo '<br /><a id="puawp_connect_url" style="border-style:solid; padding:5px; border-color:orange;" href="'.$authorizeUrl.'">Click Here To Connect To Pop Up Archive</a>';
         
         if(isset($_GET['code'])) {
             try {
-                /** @todo: - use isset to check if "code" param below exists */
-//                $post_data = array();
-//                $curl_opts = array(CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => false,);
-//                $accessToken = $popuparchive->accessToken($_GET['code'], $post_data, $curl_opts);
-//                $accessToken = $popuparchive->accessToken($_GET['code'], $post_data);
                 $accessToken = $popuparchive->simpleAccessTokenRequest($_GET['code']);
                 echo puawp_jquery_snippet();
             } catch (Popuparchive_Services_Invalid_Http_Response_Code_Exception $e) {
-                //exit($e->getMessage());
                 echo '<div style="color:red;"><p><strong>Pop Up Archive Error: Could not process the request - Error code ('.$e->getHttpCode().').</strong></p></div>';
-
                 return;
             }
+            //store the token in the options
+            $puawp_redir_uri_base = site_url().'/wp-admin/admin.php';
+            $puawp_redir_uri_query = '?page=puawp_options';
+            $param = array('puawp_client_id' => $puawp_client_id,
+                        'puawp_client_secret' => $puawp_client_secret,
+                        'puawp_access_token' => $accessToken['access_token'],
+                        'puawp_redir_uri_base' => $puawp_redir_uri_base,
+                        'puawp_redir_uri_query' => $puawp_redir_uri_query
+                        );
+            update_option('popuparchive_settings', $param); //store the results in WP options table
+            $popuparchive->setAccessToken($accessToken['access_token']);
         }
-        //store the token in the options
-        $puawp_redir_uri_base = site_url().'/wp-admin/admin.php';
-        $puawp_redir_uri_query = '?page=puawp_options';
-        $param = array('puawp_client_id' => $puawp_client_id,
-                    'puawp_client_secret' => $puawp_client_secret,
-                    'puawp_access_token' => $accessToken['access_token'],
-                    'puawp_redir_uri_base' => $puawp_redir_uri_base,
-                    'puawp_redir_uri_query' => $puawp_redir_uri_query
-                    );
-        update_option('popuparchive_settings', $param); //store the results in WP options table
-        $popuparchive->setAccessToken($accessToken['access_token']);
     } elseif ($puawp_access_token) {
         $popuparchive->setAccessToken($puawp_access_token);
     }
