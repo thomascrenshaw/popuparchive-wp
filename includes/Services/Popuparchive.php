@@ -6,7 +6,7 @@
  * @package   Popuparchive_Services
  * @author    Thomas Crenshaw <thomas@circadigital.biz>
  * @copyright 2014 Thomas Crenshaw <thomas@circadigital.biz>
- * @license   
+ * @license
  * @link      http://github.com/thomascrenshaw/pua-api-php52
  */
 require_once 'Popuparchive/Exception.php';
@@ -215,8 +215,8 @@ class Popuparchive_Services
 
     /**
      * Get authorization URL
-     * 
-     * The authorize URL returns the code that is needed to retrieve the access token. Once the code has been returned, 
+     *
+     * The authorize URL returns the code that is needed to retrieve the access token. Once the code has been returned,
      * a request is made for the access token.
      *
      * @param array $params Optional query string parameters
@@ -240,7 +240,7 @@ class Popuparchive_Services
 
     /**
      * Get access token URL
-     * 
+     *
      * This method uses HTTP headers and POST to retreive the access token. As of the 1.0 release, Pop Up Archive
      * API only requires a POST URL and does not require that headers are sent. Because of this, the getAccessTokenUrl method
      * which includes the request() method has NOT been tested. The only access token method that has been tested is the
@@ -255,18 +255,14 @@ class Popuparchive_Services
      */
     public function getAccessTokenUrl($params = array())
     {
-
         return $this->buildUrl(self::$_paths['access_token'], $params, false);
     }
 
     /**
-     * Retrieve access token using just HTTP POST 
+     * Retrieve access token using just HTTP POST
      *
-     * It is possible to retreive a Pop Up Archive access token through a simple
-     * POST request. This eliminates the need for headers and cURL. The more 
-     * "complicated" methods for retreiving RESTful data have been added to
-     * help "future proof" this SDK although there will still be some tweaking needed
-     * to make it all work together if the PUA API is changed. 
+     * It is possible to retreive a Pop Up Archive access token through a simplified
+     * POST request. That is what this function does.
      *
      * @param string $code        Optional OAuth code returned from the service provider
      * @param array  $postData    Optional post data
@@ -277,7 +273,8 @@ class Popuparchive_Services
      * @access public
      * @see Popuparchive::postRequestAccessToken()
      */
-    public function simpleAccessTokenRequest($code = null) {
+    public function simpleAccessTokenRequest($code = null)
+    {
         $tokenUrl = "https://".self::$_domain.'/'.
                     self::$_paths['access_token'].
                     '?client_id='.$this->_clientId.
@@ -285,7 +282,34 @@ class Popuparchive_Services
                     '&redirect_uri='.$this->_redirectUri.
                     '&code='.$code.
                     '&grant_type=authorization_code';
+
         return $this->postRequestAccessToken($tokenUrl);
+    }
+
+    /**
+     * Retrieve access token
+     *
+     * @param string $code        Optional OAuth code returned from the Pop Up Archive
+     * @param array  $postData    Optional post data
+     * @param array  $curlOptions Optional cURL options
+     *
+     * @return mixed
+     *
+     * @access public
+     * @see Popuparchive::_getAccessToken()
+     */
+    public function accessToken($code = null, $postData = array(), $curlOptions = array())
+    {
+        $defaultPostData = array(
+            'code' => $code,
+            'client_id' => $this->_clientId,
+            'client_secret' => $this->_clientSecret,
+            'redirect_uri' => $this->_redirectUri,
+            'grant_type' => 'authorization_code'
+        );
+        $postData = array_filter(array_merge($defaultPostData, $postData));
+
+        return $this->_getAccessToken($postData, $curlOptions);
     }
 
     /**
@@ -472,7 +496,7 @@ class Popuparchive_Services
 
     /**
      * Set response format
-     * 
+     *
      * 2 response formats are set as part of a private static variable (array)
      *  set at the beginning of this SDK. If more are added in the future
      * (e.g. XML or some new format) just add to the static variable.
@@ -810,13 +834,43 @@ class Popuparchive_Services
         }
 
         $url .= (count($params)) ? '?' . http_build_query($params) : '';
+
         return $url;
     }
 
-    protected function postRequestAccessToken($code) 
+    /**
+     * Retrieve access token
+     *
+     * @param array $postData    Post data
+     * @param array $curlOptions Optional cURL options
+     *
+     * @return mixed
+     *
+     * @access protected
+     */
+    protected function _getAccessToken($postData, $curlOptions = array())
+    {
+        $options = array(CURLOPT_POST => true, CURLOPT_POSTFIELDS => $postData);
+        $options += $curlOptions;
+        $response = json_decode(
+            $this->request($this->getAccessTokenUrl(), $options),
+            true
+        );
+
+        if (array_key_exists('access_token', $response)) {
+            $this->_accessToken = $response['access_token'];
+
+            return $response;
+        } else {
+            return false;
+        }
+    }
+
+
+    protected function postRequestAccessToken($url)
     {
         $response = json_decode(
-            $this->post($code),
+            $this->post($url),
             true
         );
         if (array_key_exists('access_token', $response)) {
@@ -917,9 +971,12 @@ class Popuparchive_Services
                 $includeAccessToken
             );
         }
+
         curl_setopt_array($curlinit, $options);
 
         $data = curl_exec($curlinit);
+        $cherror = curl_error($curlinit);
+
         $info = curl_getinfo($curlinit);
         curl_close($curlinit);
 
@@ -939,7 +996,7 @@ class Popuparchive_Services
             return $this->_lastHttpResponseBody;
         } else {
             throw new Popuparchive_Services_Invalid_Http_Response_Code_Exception(
-                null,
+                $cherror,
                 0,
                 $this->_lastHttpResponseBody,
                 $this->_lastHttpResponseCode

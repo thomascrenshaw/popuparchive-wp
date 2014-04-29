@@ -240,19 +240,32 @@ function popuparchive_authenticate($puawp_options)
     }
     $popuparchive = new Popuparchive_Services($puawp_client_id, $puawp_client_secret, $puawp_redir_uri);
  
+    /* @todo add check box to form for overriding the cURL SSL Verify Host and Peer settings 
+     * using the below cURL options
+     *
+     * pseudo code --
+     * if (checked == checkboxOverrideCurlVerify) {
+     * $popuparchive->setCurlOptions(array(
+     *     CURLOPT_SSL_VERIFYHOST => 0,
+     *    CURLOPT_SSL_VERIFYPEER => 0
+     * ));
+     * }
+     * 
+     */
+
     if ($puawp_access_token == "") {
         $authorizeUrl = $popuparchive->getAuthorizeUrl();
         echo '<br /><a id="puawp_connect_url" style="border-style:solid; padding:5px; border-color:orange;" href="'.$authorizeUrl.'">Click Here To Connect To Pop Up Archive</a>';
         
         if(isset($_GET['code'])) {
             try {
-                $accessToken = $popuparchive->simpleAccessTokenRequest($_GET['code']);
+                $accessToken = $popuparchive->accessToken($_GET['code']);
                 echo puawp_jquery_snippet();
             } catch (Popuparchive_Services_Invalid_Http_Response_Code_Exception $e) {
                 echo '<div style="color:red;"><p><strong>Pop Up Archive Error: Could not process the request - Error code ('.$e->getHttpCode().').</strong></p></div>';
                 return;
             }
-            //store the token in the options
+            /* store the token in the options database */
             $puawp_redir_uri_base = site_url().'/wp-admin/admin.php';
             $puawp_redir_uri_query = '?page=puawp_options';
             $param = array('puawp_client_id' => $puawp_client_id,

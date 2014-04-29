@@ -317,8 +317,7 @@ function puawp_set_access_token($puawp_options)
  *
  * @param collection_id string (optional) unique identifier of the currently selected collection
  *
- * @todo 1 change getPublicCollections to getting the users collection; dependency - OAuth issue resolved
- * @todo 2 update the return to something useful
+ * @todo  update the return to something useful
  *
  * @return object
  */
@@ -344,14 +343,12 @@ function pua_get_collections($collection_ids = null)
     $popuparchive = puawp_set_access_token($puawp_options);
 
     try {
-        /* @todo 1 */
-        //$collections = $popuparchive->getPublicCollections(); //get all public collections
         $collections = $popuparchive->get('https://www.popuparchive.com/api/collections'); //get a user's collections
     } catch (Popuparchive_Services_Invalid_Http_Response_Code_Exception $e) {
         /* @todo: add check what kind of error and display message */
         $error_code = $e->getHttpCode();
 
-        return $data; //for now if there is a problem return empty array
+        return $error_code; //for now if there is a problem return empty array
     }
     /* decode the collections JSON into an array and return */
     $data = json_decode($collections, true);
@@ -515,7 +512,11 @@ function get_collection_name($collection_id, $collections_data)
 /**
  * Method to get collections
  *
- * This method retreives collections using the Pop Up Archive API
+ * This method retreives collections using the Pop Up Archive API. The process it follows to retreive the collections is:
+ * 1) Pull the options table values for collections
+ * 2) check to see if a refresh collections has been requested or if the options table does not contain collections
+ * 2a) If this is true, then make an API request
+ * 2b) otherwise, use the database values.
  *
  * @param boolean $refresh variable to determine if refreshing of data is needed
  *
@@ -523,16 +524,14 @@ function get_collection_name($collection_id, $collections_data)
  *
  * @return array
  */
-function get_collections($refresh = false)
+function get_collections()
 {
     $stored_collections_data = get_option('popuparchive_collections_data');
-    /* check to see if the collections are in the database */
-    if ($stored_collections_data) {
-        $collections_data = unserialize($stored_collections_data);
-    } else {
-        /* get the list of applicable collections from the API */
+    if (isset($_POST['puawp_refresh_collections']) || false == count($stored_collections_data)) {
         $collections_data = pua_get_collections();
         store_data($collections_data,'popuparchive_collections_data');
+    } else {
+        $collections_data = unserialize($stored_collections_data);
     }
 
     return $collections_data;
@@ -665,6 +664,7 @@ function display_collections_page_top($collections_data, $collection_name = '', 
 ?>
         </select>
         <span>&nbsp;<input name="puawp_refresh_table" type="submit" value="submit" class="button-primary" /></span>
+        <span>&nbsp;<input name="puawp_refresh_collections" type="submit" value="refresh collections" class="button-primary" /></span>
     </form>
 
 <?php
